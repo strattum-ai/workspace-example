@@ -1,0 +1,9 @@
+# graph_mapping.yaml — Ontologia do Workspace
+# Documentação: https://docs.strattum.ai/ontology
+version: "1.0"
+
+# Defina suas entidades aqui
+entities: []
+
+# Defina seus relacionamentos aqui
+relationships: []
