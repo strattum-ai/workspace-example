@@ -1,6 +1,6 @@
 # Skills do Workspace
 
-Coloque aqui as skills customizadas do agente Claw.
+Coloque aqui as skills customizadas da plataforma Strattum.
 
 Cada skill é um arquivo `.md` com frontmatter YAML seguido do prompt da skill.
 
@@ -26,3 +26,7 @@ Instruções para o agente...
 - `context` — enriquecimento de contexto de entidades
 - `automation` — automações e workflows
 - `custom` — skills customizadas do cliente
+
+## Scripts
+
+Scripts Python referenciados nas skills devem ser colocados na pasta `scripts/`.

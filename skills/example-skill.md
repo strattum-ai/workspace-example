@@ -1,7 +1,7 @@
 ---
 name: exemplo_skill
 display_name: Skill de Exemplo
-description: Demonstra o formato de uma skill customizada do Claw.
+description: Demonstra o formato de uma skill customizada.
 category: custom
 tags: [exemplo, template]
 ---
