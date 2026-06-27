@@ -31,7 +31,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from strattum_ai_sdk import AITransform  # platform contract (pip: strattum-ai-sdk)
+from strattum_sdk import AITransform  # platform contract (pip: strattum-sdk)
 
 
 # ---------------------------------------------------------------------------
