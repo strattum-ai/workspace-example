@@ -328,7 +328,7 @@ class PlaybookAdherenceTransform(AITransform):
     # Sonnet responde ao few-shot e quase elimina o falso "executou" em
     # comportamentos ausentes (o erro que esconde gap de coaching). gpt-4o ignora
     # o few-shot e fica leniente. Requer LLM_MODEL=claude-sonnet-4-6 no ambiente.
-    model = "claude-sonnet-4-6"
+    model = "anthropic/claude-sonnet-4-6"  # litellm model id (provider-prefixed)
     prompt_version = "v5"       # v5 = few-shot + fronteira executou/parcial calibrada (Sonnet)
     id_field = "id_meeting"     # PK da transcrição no raw
     max_concurrency = 10
