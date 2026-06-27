@@ -1,0 +1,4 @@
+# Dependencies for the AI enrichment transforms in this folder.
+# Installed by the platform when running them; install locally to lint/test.
+strattum-ai-sdk @ git+https://github.com/strattum-ai/strattum-ai-sdk.git
+pydantic>=2,<3
