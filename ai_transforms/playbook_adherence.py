@@ -230,12 +230,29 @@ class CriterionResult(BaseModel):
     evidence: str = Field(description="Justificativa curta + trecho citado da transcrição (ou por que é N/A)")
 
 
-class PlaybookAdherence(BaseModel):
-    # Preenchido pelo LLM
+class PlaybookAdherenceLLM(BaseModel):
+    """Schema que o LLM retorna (output_schema). Mantido enxuto e sem dicts
+    abertos — providers de structured output (Anthropic/OpenAI strict) exigem
+    ``additionalProperties: false`` e não aceitam ``dict[str, X]``. Os números
+    (score, contagens, block_scores) são calculados em ``post()``, não pelo LLM."""
+
     criteria: list[CriterionResult] = Field(description="Avaliação de TODOS os critérios da matriz")
     summary: str = Field(description="Síntese executiva da qualidade da call (2-4 frases, PT-BR)")
     strengths: list[str] = Field(default_factory=list, description="Pontos fortes observados")
     improvements: list[str] = Field(default_factory=list, description="Recomendações de melhoria priorizadas")
+
+
+class BlockScore(BaseModel):
+    block: str
+    score: Optional[float] = None
+
+
+class PlaybookAdherence(BaseModel):
+    # Persistido (result_json). Espelha o LLM + campos calculados em post().
+    criteria: list[CriterionResult]
+    summary: str
+    strengths: list[str] = Field(default_factory=list)
+    improvements: list[str] = Field(default_factory=list)
 
     # Calculado deterministicamente em post() — não confiar no LLM para números
     adherence_score: Optional[float] = Field(default=None, description="Aderência ponderada 0..1 (exclui N/A)")
@@ -245,7 +262,7 @@ class PlaybookAdherence(BaseModel):
     n_parcial: int = 0
     n_nao_executou: int = 0
     n_na: int = 0
-    block_scores: dict[str, Optional[float]] = Field(default_factory=dict, description="Score por bloco da matriz")
+    block_scores: list[BlockScore] = Field(default_factory=list, description="Score por bloco da matriz")
 
 
 # ---------------------------------------------------------------------------
@@ -324,7 +341,7 @@ class PlaybookAdherenceTransform(AITransform):
     connector = "bigquery"
     source = "delta_scan('/data/raw/bigquery/sandbox/transcription_tldv_synthetic_content')"
     target = "enrichment.rd_station__playbook_adherence"
-    output_schema = PlaybookAdherence
+    output_schema = PlaybookAdherenceLLM
     # Sonnet responde ao few-shot e quase elimina o falso "executou" em
     # comportamentos ausentes (o erro que esconde gap de coaching). gpt-4o ignora
     # o few-shot e fica leniente. Requer LLM_MODEL=claude-sonnet-4-6 no ambiente.
@@ -359,36 +376,47 @@ class PlaybookAdherenceTransform(AITransform):
         t = row.get("transcription") or ""
         return len(t) > 200  # pula calls curtas / sem conteúdo
 
-    def post(self, result: PlaybookAdherence, row: dict[str, Any]) -> PlaybookAdherence:
-        """Calcula scores deterministicamente a partir dos status do LLM."""
-        # Contagens
-        result.n_executou = sum(c.status == "executou" for c in result.criteria)
-        result.n_parcial = sum(c.status == "executou_parcialmente" for c in result.criteria)
-        result.n_nao_executou = sum(c.status == "nao_executou" for c in result.criteria)
-        result.n_na = sum(c.status == "na" for c in result.criteria)
+    def post(self, result: PlaybookAdherenceLLM, row: dict[str, Any]) -> PlaybookAdherence:
+        """Enriquece o resultado do LLM com os números calculados deterministicamente."""
+        criteria = result.criteria
 
         # Score ponderado geral (exclui N/A)
-        applicable = [c for c in result.criteria if c.status != "na"]
+        applicable = [c for c in criteria if c.status != "na"]
         if applicable:
-            score = sum(_WEIGHTS.get(c.status, 0.0) for c in applicable) / len(applicable)
-            result.adherence_score = round(score, 4)
-            result.classificacao = _classify(score)
-            result.followed_playbook = score >= _FOLLOWED_THRESHOLD
+            score = round(sum(_WEIGHTS.get(c.status, 0.0) for c in applicable) / len(applicable), 4)
+            classificacao = _classify(score)
+            followed = score >= _FOLLOWED_THRESHOLD
         else:
-            result.adherence_score = None
-            result.classificacao = None
-            result.followed_playbook = None
+            score = classificacao = followed = None
 
         # Score por bloco (bloco derivado em código, não do LLM)
         by_block: dict[str, list[CriterionResult]] = defaultdict(list)
-        for c in result.criteria:
+        for c in criteria:
             block = _CRITERIA_BY_ID.get(c.criterion_id, {}).get("block", "Outros")
             by_block[block].append(c)
-        block_scores: dict[str, Optional[float]] = {}
-        for block, items in by_block.items():
-            appl = [c for c in items if c.status != "na"]
-            block_scores[block] = (
-                round(sum(_WEIGHTS.get(c.status, 0.0) for c in appl) / len(appl), 4) if appl else None
+        block_scores = [
+            BlockScore(
+                block=block,
+                score=(
+                    round(sum(_WEIGHTS.get(c.status, 0.0) for c in appl) / len(appl), 4)
+                    if (appl := [c for c in items if c.status != "na"])
+                    else None
+                ),
             )
-        result.block_scores = block_scores
-        return result
+            for block, items in by_block.items()
+        ]
+
+        return PlaybookAdherence(
+            criteria=criteria,
+            summary=result.summary,
+            strengths=result.strengths,
+            improvements=result.improvements,
+            adherence_score=score,
+            classificacao=classificacao,
+            followed_playbook=followed,
+            n_executou=sum(c.status == "executou" for c in criteria),
+            n_parcial=sum(c.status == "executou_parcialmente" for c in criteria),
+            n_nao_executou=sum(c.status == "nao_executou" for c in criteria),
+            n_na=sum(c.status == "na" for c in criteria),
+            block_scores=block_scores,
+        )
