@@ -342,11 +342,11 @@ class PlaybookAdherenceTransform(AITransform):
     source = "delta_scan('/data/raw/bigquery/sandbox/transcription_tldv_synthetic_content')"
     target = "enrichment.rd_station__playbook_adherence"
     output_schema = PlaybookAdherenceLLM
-    # Sonnet responde ao few-shot e quase elimina o falso "executou" em
-    # comportamentos ausentes (o erro que esconde gap de coaching). gpt-4o ignora
-    # o few-shot e fica leniente. Requer LLM_MODEL=claude-sonnet-4-6 no ambiente.
-    model = "anthropic/claude-sonnet-4-6"  # litellm model id (provider-prefixed)
-    prompt_version = "v5"       # v5 = few-shot + fronteira executou/parcial calibrada (Sonnet)
+    # Haiku: mais barato/rápido por chamada. Reaproveita o mesmo few-shot que
+    # calibra a fronteira executou/parcial; o prompt caching do system rubric
+    # reduz o custo de input. Requer ANTHROPIC_API_KEY no ambiente.
+    model = "anthropic/claude-haiku-4-5"  # litellm model id (provider-prefixed)
+    prompt_version = "v5"       # v5 = few-shot + fronteira executou/parcial calibrada
     id_field = "id_meeting"     # PK da transcrição no raw
     max_concurrency = 50   # tune to your Anthropic tier (RPM/OTPM)
 
