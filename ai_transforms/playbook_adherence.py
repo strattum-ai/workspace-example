@@ -348,7 +348,7 @@ class PlaybookAdherenceTransform(AITransform):
     model = "anthropic/claude-sonnet-4-6"  # litellm model id (provider-prefixed)
     prompt_version = "v5"       # v5 = few-shot + fronteira executou/parcial calibrada (Sonnet)
     id_field = "id_meeting"     # PK da transcrição no raw
-    max_concurrency = 10
+    max_concurrency = 20   # bounded by the provider OTPM/RPM; raise with your Anthropic tier
 
     def prompt(self, row: dict[str, Any]) -> str:
         title = row.get("title") or row.get("meeting_title") or ""
