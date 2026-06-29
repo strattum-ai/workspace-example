@@ -348,14 +348,14 @@ class PlaybookAdherenceTransform(AITransform):
     model = "anthropic/claude-sonnet-4-6"  # litellm model id (provider-prefixed)
     prompt_version = "v5"       # v5 = few-shot + fronteira executou/parcial calibrada (Sonnet)
     id_field = "id_meeting"     # PK da transcrição no raw
-    max_concurrency = 20   # bounded by the provider OTPM/RPM; raise with your Anthropic tier
+    max_concurrency = 50   # tune to your Anthropic tier (RPM/OTPM)
 
-    def prompt(self, row: dict[str, Any]) -> str:
-        title = row.get("title") or row.get("meeting_title") or ""
-        header = f"Reunião: {title}\n\n" if title else ""
+    def system_prompt(self) -> str:
+        # Static across every call (rules + rubric + few-shot + matrix) → cached by
+        # the platform (Anthropic prompt caching). Only the transcript varies per row.
         return (
             "Você é um avaliador sênior de qualidade do time de Customer Success da RD Station. "
-            "Avalie a transcrição da reunião abaixo contra a Matriz de Critérios de Qualidade, "
+            "Avalie a transcrição da reunião contra a Matriz de Critérios de Qualidade, "
             "atribuindo a cada critério um nível da escala oficial e citando evidência da transcrição.\n\n"
             "Regras importantes:\n"
             "1. Avalie SOMENTE com base no que está na transcrição. Não invente fatos.\n"
@@ -367,10 +367,13 @@ class PlaybookAdherenceTransform(AITransform):
             "6. Escreva summary, strengths e improvements em português (PT-BR).\n\n"
             f"{_RUBRIC}\n\n"
             f"{_FEWSHOT}\n\n"
-            f"MATRIZ DE CRITÉRIOS:{_MATRIX}\n\n"
-            f"{header}"
-            f"TRANSCRIÇÃO:\n{row['transcription']}"
+            f"MATRIZ DE CRITÉRIOS:{_MATRIX}"
         )
+
+    def prompt(self, row: dict[str, Any]) -> str:
+        title = row.get("title") or row.get("meeting_title") or ""
+        header = f"Reunião: {title}\n\n" if title else ""
+        return f"{header}TRANSCRIÇÃO:\n{row['transcription']}"
 
     def should_process(self, row: dict[str, Any]) -> bool:
         t = row.get("transcription") or ""
