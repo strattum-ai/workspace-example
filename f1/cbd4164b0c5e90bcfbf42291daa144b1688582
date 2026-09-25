@@ -1,0 +1,25 @@
+skills/klavi_agregacao.md
+  s_b948a31db39f04::t_439e22286f094f 1-471
+skills/klavi_catalogo.md
+  s_b948a31db39f04::t_439e22286f094f 1-147
+skills/klavi_coorte.md
+  s_b948a31db39f04::t_439e22286f094f 1-265
+skills/klavi_descoberta.md
+  s_b948a31db39f04::t_439e22286f094f 1-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f1cbd4164b0c5e90bcfbf42291daa144b1688582",
+  "prompts": {},
+  "sessions": {
+    "s_b948a31db39f04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "abc4bd92-bce7-4daf-a694-afe3a0083207",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Gabriel Zacchi <zacchidev@gmail.com>"
+    }
+  }
+}
